@@ -1,0 +1,11 @@
+# Fim de linha: o Git guarda os textos com LF; cada sistema recebe o seu ao clonar
+# (Windows: CRLF, Linux: LF).
+* text=auto
+
+# Arquivos binários (nunca converter)
+*.jpg binary
+*.jpeg binary
+*.png binary
+*.mp4 binary
+*.uf2 binary
+*.pt binary

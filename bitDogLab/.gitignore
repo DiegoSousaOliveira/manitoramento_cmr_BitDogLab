@@ -1,0 +1,8 @@
+build
+!.vscode/*
+
+# senha do Wi-Fi: nunca no Git (o modelo é o wifi_config.exemplo.h)
+wifi_config.h
+
+# testes compilados no PC
+testes/bin/

@@ -1,0 +1,31 @@
+# Sentinela Casa — dependências do app do PC (Python 3.11+; testado no 3.14).
+#
+# GPU NVIDIA: instale ANTES o PyTorch com CUDA (veja o README), depois rode
+#   pip install -r requirements.txt
+# Sem isso, o pip instala a versão do PyTorch que roda só na CPU.
+
+# --- Interface gráfica ---
+# "Essentials" traz QtCore/QtGui/QtWidgets sem os ~500 MB de módulos extras
+# (WebEngine, 3D...). O player de eventos usa OpenCV, então não precisamos do QtMultimedia.
+PySide6-Essentials>=6.8
+qtawesome>=1.3
+
+# --- Vídeo e visão computacional ---
+numpy>=2.0
+opencv-python>=4.10
+ultralytics>=8.3
+supervision>=0.25,<0.31  # o ByteTrack (exigido pela especificação) sai na 0.31
+av>=13
+
+# --- Câmeras (ONVIF/PTZ) ---
+onvif-zeep>=0.2.12
+
+# --- Infraestrutura ---
+ruamel.yaml>=0.18    # lê/grava o config.yaml preservando os comentários
+keyring>=25          # senhas no cofre do sistema operacional
+psutil>=6            # uso de CPU na barra lateral
+nvidia-ml-py>=12     # uso da GPU NVIDIA na barra lateral (ignorado sem GPU)
+
+# --- Testes ---
+pytest>=8
+pytest-qt>=4.4       # testes da interface (roda sem abrir janelas)

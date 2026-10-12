@@ -1,0 +1,229 @@
+# =============================================================================
+# Sentinela Casa — configurações gerais do app do PC
+# -----------------------------------------------------------------------------
+# - Câmeras, zonas e eventos NÃO ficam aqui: ficam no banco SQLite
+#   (dados/sentinela.db) e são cadastrados pela interface.
+# - Senhas das câmeras NUNCA ficam aqui: vão para o cofre de senhas do sistema
+#   (Gerenciador de Credenciais no Windows; GNOME Keyring/KWallet no Linux).
+# - Caminhos relativos são resolvidos a partir da pasta pc/.
+# - A tela de Configurações (Fase 8) também grava neste arquivo, preservando
+#   os comentários.
+# =============================================================================
+
+geral:
+  pasta_dados: dados            # banco, eventos e logs ficam aqui
+  log_nivel: INFO               # DEBUG | INFO | WARNING | ERROR
+  log_tamanho_mb: 5             # tamanho máximo de cada arquivo de log
+  log_arquivos: 5               # quantos arquivos de log antigos manter
+
+interface:
+  tema: escuro                  # escuro | claro
+  layout_mosaico: auto          # 1 | 2x2 | 3x3 | 4x4 | auto
+  fps_mosaico: 12               # atualizações por segundo de cada bloco do mosaico
+  fps_tela_camera: 25           # máx. de atualizações por segundo na Tela da câmera (alta resolução)
+  mostrar_caixas_mosaico: true  # desenhar as caixas de detecção no mosaico
+  suavizar_ms: 250              # atraso do vídeo ao vivo para absorver as "rajadas" do Wi-Fi (0 = desligado)
+
+# Valores já preenchidos ao abrir o diálogo "Adicionar câmera".
+cadastro:
+  usuario: admin
+  porta_rtsp: 554
+  porta_onvif: 8899
+  canais: 1
+  max_canais: 4                 # máximo de canais (fluxos RTSP separados) no cadastro
+  modelo_url: icsee             # chave de um item de "modelos_url" (abaixo)
+
+# Modelos de URL RTSP oferecidos no cadastro (dá para acrescentar outros).
+# Variáveis: {ip} {porta} {usuario} {senha} {canal} {stream}
+#   {stream}: 0 = principal (resolução máxima), 1 = substream (leve)
+#   {canal}:  1 = primeiro fluxo. Algumas câmeras de duas lentes usam canais 1 e 2;
+#             outras (ex.: iCSee XM232) mandam as duas lentes juntas no canal 1.
+# Senha vazia: "{usuario}:{senha}@" vira "{usuario}@" e "{senha}" vira "".
+modelos_url:
+  icsee:
+    nome: "iCSee / Xiongmai"
+    url: "rtsp://{ip}:{porta}/user={usuario}&password={senha}&channel={canal}&stream={stream}.sdp"
+  onvif:
+    nome: "ONVIF genérico (/onvif1)"
+    url: "rtsp://{usuario}:{senha}@{ip}:{porta}/onvif1"
+
+captura:
+  transporte_rtsp: tcp          # tcp (mais estável no Wi-Fi) | udp
+  timeout_abertura_s: 15        # máx. para abrir um stream (alta resolução no Wi-Fi demora)
+  timeout_leitura_s: 10         # máx. para chegar cada quadro
+  reconexao_min_s: 1            # primeira espera antes de reconectar (backoff)
+  reconexao_max_s: 30           # espera máxima entre tentativas
+
+# "Câmeras falsas" para testar sem câmera real. Os arquivos aparecem na lista
+# do cadastro.  tipo: arquivo (.mp4 em loop) | webcam (índice 0, 1...)
+# Gere os vídeos com:  python tools/gerar_video_teste.py [--duas-lentes | --pessoas]
+fontes_teste:
+  - nome: "Vídeo de exemplo"
+    tipo: arquivo
+    caminho: videos/exemplo.mp4
+  - nome: "Duas lentes empilhadas (como a iCSee XM232)"
+    tipo: arquivo
+    caminho: videos/duas_lentes.mp4
+  - nome: "Pessoas e ônibus (para testar a IA)"
+    tipo: arquivo
+    caminho: videos/pessoas.mp4
+  - nome: "Webcam do PC"
+    tipo: webcam
+    caminho: "0"
+
+ia:
+  modelo: yolo11n.pt
+  modelo_reserva: yolov8n.pt    # usado se o principal não carregar
+  pasta_modelos: modelos        # pesos baixados/exportados ficam aqui (fora do Git)
+  dispositivo: auto             # auto (CUDA se houver) | cpu | cuda
+  ia_fps: 6                     # inferências por segundo, por vista (câmera/lente)
+  conf_minima: 0.40             # abaixo disso a detecção vira DESCONHECIDO
+  conf_deteccao: 0.15           # abaixo disso o YOLO nem considera (ruído)
+  # De onde a IA lê as imagens (decisão de 11/10/2026):
+  #   principal = imagem HD: enxerga objetos mais distantes; o stream HD das câmeras com
+  #               detecção fica SEMPRE aberto (mais Wi-Fi e um pouco de CPU). Se o HD cair,
+  #               a IA continua no substream.
+  #   substream = leve (como na especificação original).
+  fonte: principal
+  tamanho_imagem: 640           # lado da imagem enviada ao YOLO ao analisar o substream (pixels)
+  tamanho_imagem_hd: 1280       # idem ao analisar o stream principal (HD)
+  ia_so_com_movimento: true     # padrão: sem movimento, repete o último resultado sem rodar o YOLO
+  verificar_parado_s: 2         # com a opção acima: sem movimento, CONFERE os objetos com o YOLO a cada X s
+  identificar:                  # objetos que a IA identifica (na tela, nos eventos e nos alertas)
+    PESSOA: true
+    BICICLETA: true
+    CARRO: true
+    MOTO: true
+    ONIBUS: true
+    CAMINHAO: true
+    GATO: true
+    CACHORRO: true
+    DESCONHECIDO: true          # manchas de movimento sem objeto reconhecido (folhas, sombras...)
+  rastreio_perdido_s: 3         # ByteTrack mantém o ID por este tempo sem ver o objeto
+  manter_perdido_s: 1.0         # objeto que a IA deixou de ver continua na tela por este tempo (não "pisca")
+  reassociar_sobreposicao: 0.5  # caixa nova quase toda sobre um objeto recém-perdido herda o ID dele
+  # Movimento (MOG2): regiões com movimento sem objeto reconhecido viram DESCONHECIDO
+  movimento_area_minima: 0.005  # fração do quadro (0.5%) que conta como movimento
+  movimento_largura: 320        # largura da imagem reduzida usada no detector de movimento
+  movimento_historico: 300      # quadros usados para aprender o "fundo" da cena
+  movimento_limiar: 25          # sensibilidade (maior = menos sensível)
+  movimento_aquecimento_s: 3    # segundos iniciais aprendendo o fundo (sem regiões)
+  movimento_sobreposicao: 0.2   # movimento coberto por um objeto do YOLO nesta fração não vira DESCONHECIDO
+  conf_movimento: 0.50          # confiança dada ao DESCONHECIDO de movimento (para o rastreador)
+
+eventos:
+  area: quadro                  # quadro | zona  (onde o movimento inicia um evento)
+  pre_evento_s: 5               # segundos gravados ANTES do início
+  pos_evento_s: 3               # segundos gravados DEPOIS do fim
+  fim_evento_s: 5               # sem atividade por este tempo = fim do evento
+  max_evento_s: 60              # passou disso, fecha e abre outro evento
+  objeto_novo_s: 10             # objeto reconhecido só conta como atividade nos 1ºs X s (carro estacionado não prende o evento)
+  aquecimento_s: 5              # objetos já presentes ao ligar a câmera não abrem evento
+  confirmar_resultados: 2       # atividade em N análises seguidas da IA para abrir evento (filtra ruído)
+  # O clipe é gravado sempre do substream (gravar o HD exigiria guardar GBs de quadros na memória).
+  # A FOTO do evento sai da imagem que a IA analisa: HD quando ia.fonte = principal.
+  fps_clipe: 12                 # quadros por segundo do clipe (taxa constante)
+  qualidade_clipe: 23           # H.264 CRF: menor = melhor e maior (18 a 28)
+  retencao_dias: 7
+  limite_disco_gb: 20
+  intervalo_retencao_min: 60    # de quanto em quanto tempo a limpeza roda
+
+# Aprendizado contínuo com as suas câmeras (Fase 9).
+# Ciclo automático: coletar -> o PROFESSOR (modelo grande) rotula -> treinar -> comparar com o
+# modelo atual nas imagens de validação -> só troca se o novo for MELHOR (dá para voltar).
+treino:
+  coletar: true                 # guardar imagens "difíceis" em dados/treino/pendentes/
+  conf_duvida: 0.60             # objeto com confiança abaixo disso = dúvida
+  intervalo_min_s: 20           # no máximo 1 imagem a cada X s por vista
+  max_por_hora: 30              # por vista
+  amostra_min: 30               # uma imagem comum a cada X minutos (dia, noite, chuva...)
+  limite_gb: 30                 # espaço máximo da pasta de treino
+  automatico: true              # roda o ciclo sozinho no horário abaixo (se houver imagens novas)
+  horario: "03:00"              # de madrugada: a placa de vídeo está mais livre
+  modelo_professor: yolo11x.pt  # modelo GRANDE que rotula as imagens (~110 MB; só roda no treino)
+  conf_professor: 0.50          # a partir daqui o professor "tem certeza"
+  conf_professor_duvida: 0.25   # entre esta e a de cima: dúvida -> a imagem vai para a sua revisão
+  min_novas: 50                 # imagens novas rotuladas para valer a pena treinar
+  min_validacao: 20             # imagens de validação (nunca usadas no treino) para comparar modelos
+  validacao_porcento: 20        # parte das imagens separada para validação (por blocos de 1 hora)
+  epocas: 30                    # épocas fixas: o treino não olha a validação (ela fica só para a prova final)
+  congelar: 10                  # camadas da "base" que NÃO mudam (com poucas imagens, evita esquecer o que já sabia)
+  lote: 8                       # imagens por passo (menos = usa menos memória da placa de vídeo)
+  ajudantes: 0                  # processos extras que preparam as imagens (no Windows cada um reserva ~1,5 GB; 0 = mais seguro)
+  memoria_minima_gb: 7          # memória livre (RAM + arquivo de paginação) para COMEÇAR: o treino usa ~4,5 GB + a placa de vídeo (≥ 1 GB) + a margem abaixo
+  memoria_critica_gb: 1         # se a memória livre cair abaixo disto, o treino PARA (as câmeras têm prioridade)
+  tamanho_imagem: 1280          # igual à IA em HD (objetos distantes)
+  margem_minima: 0.01           # o modelo novo precisa ganhar pelo menos isto de mAP (0 a 1)
+  queda_maxima_classe: 0.05     # nenhuma classe pode piorar mais que isto
+  trocar_automatico: true       # modelo aprovado passa a ser usado sozinho (dá para voltar)
+  manter_modelos: 10            # quantos modelos treinados guardar
+
+# Regra de "parado na zona". A tela de Configurações permite ajustar por câmera.
+parado:
+  limite_movimento: 0.05        # deslocamento máximo (fração da largura do quadro)
+  cooldown_s: 120               # espera antes de alertar de novo o mesmo ID
+  aquecimento_s: 20             # objetos já parados ao conectar não alertam
+  tolerancia_sumico_s: 2        # ID pode sumir (oclusão) sem zerar o contador
+  limpar_apos_sumico_s: 5       # objeto alertado sumido por mais que isso -> LIMPAR
+  passou_min_s: 0.5             # tempo mínimo dentro da zona para contar como PASSOU (filtra ruído)
+  passou_desconhecido: false    # DESCONHECIDO (folhas, sombras...) também gera PASSOU?
+  sem_zona: ignorar             # lente SEM zona desenhada: ignorar (não alerta) | imagem_inteira (vigia tudo)
+  alertar:                      # quais classes geram alerta na zona (as outras só aparecem na tela)
+    PESSOA: true
+    BICICLETA: true
+    CARRO: true
+    MOTO: true
+    ONIBUS: true
+    CAMINHAO: true
+    GATO: true
+    CACHORRO: true
+    DESCONHECIDO: true
+  tempo_parado:                 # segundos parado para alertar
+    PESSOA: 8
+    BICICLETA: 10
+    MOTO: 15
+    CARRO: 30
+    ONIBUS: 30
+    CAMINHAO: 30
+    GATO: 20
+    CACHORRO: 20
+    DESCONHECIDO: 15
+  nivel:                        # BAIXO | MEDIO | ALTO
+    PESSOA: ALTO
+    CARRO: MEDIO
+    MOTO: MEDIO
+    CAMINHAO: MEDIO
+    ONIBUS: MEDIO
+    DESCONHECIDO: MEDIO
+    GATO: BAIXO
+    CACHORRO: BAIXO
+    BICICLETA: BAIXO
+
+# Comunicação UDP com a BitDogLab (formato fixo em docs/protocolo.md).
+placa:
+  ip: ""                        # IP da placa (aparece no display dela; Ajustes → Placa). Vazio = aprende pelo OLA dela
+  porta_pc: 5005                # o PC escuta aqui
+  porta_placa: 5006             # a placa escuta aqui
+  intervalo_ping_s: 2
+  intervalo_hora_s: 60
+  timeout_pong_s: 6             # sem PONG por este tempo = placa desconectada
+  reenvio_alerta_s: 2           # reenvio do alerta ativo (não silenciado)
+  buzzer: uma_vez               # uma_vez = toca quando o alerta aparece | continuo = toca até o alerta acabar
+
+ptz:
+  timeout_joystick_s: 3         # sem JOY por este tempo com a câmera andando -> parar
+  max_comandos_s: 10            # limite de comandos por segundo para a câmera
+  reenviar_movimento_s: 1.0     # enquanto segura, repete o movimento (algumas câmeras param sozinhas)
+  velocidade_botoes: 0.5        # velocidade das setas da tela e do teclado (0 a 1)
+  timeout_onvif_s: 5            # tempo máximo de resposta da câmera ao ONVIF
+  estabilizar_s: 2.0            # depois de parar, espera o vídeo (que chega atrasado) antes de reaprender o fundo
+  tempo_preset_s: 4.0           # tempo que o motor leva para chegar numa posição salva
+  inverter_x: false             # a câmera vai para o lado errado? inverta aqui (ou por câmera, Fase 8)
+  inverter_y: false
+
+# Ferramenta tools/testar_camera.py e botão "Testar conexão" do cadastro.
+diagnostico:
+  portas: [554, 8899, 34567]    # RTSP, ONVIF e DVRIP (protocolo Xiongmai)
+  timeout_s: 5                  # tempo máximo dos testes de rede (portas, RTSP, ONVIF);
+                                # o vídeo usa os limites de "captura" acima
+  medir_fps_s: 3                # por quanto tempo ler quadros para medir o FPS

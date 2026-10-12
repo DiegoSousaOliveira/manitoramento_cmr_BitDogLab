@@ -1,0 +1,29 @@
+# Ambiente virtual e caches do Python
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+
+# Dados gerados em tempo de execução (banco, eventos, logs, fotos de diagnóstico)
+pc/dados/
+
+# Pesos de modelos de IA (baixados/exportados automaticamente)
+pc/modelos/
+pc/weights/
+*.pt
+*.onnx
+*_openvino_model/
+
+# Vídeos de teste locais
+pc/videos/*
+!pc/videos/LEIA-ME.txt
+
+# Editores / sistema
+.vscode/
+# ...menos a do firmware: configuração da extensão Raspberry Pi Pico do VS Code
+# (os caminhos usam ${userHome}, então funcionam em qualquer computador)
+!bitDogLab/.vscode/
+.idea/
+Thumbs.db
+.DS_Store

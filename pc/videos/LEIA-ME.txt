@@ -1,0 +1,3 @@
+Coloque aqui vídeos .mp4 para usar como "câmeras falsas" (fonte "arquivo").
+O config.yaml já aponta para videos/exemplo.mp4.
+Esta pasta fica fora do Git (só este arquivo é versionado).

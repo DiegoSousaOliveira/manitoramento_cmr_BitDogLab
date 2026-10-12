@@ -1,0 +1,10 @@
+# Só configuração de ferramentas (o app é executado com "python main.py").
+[tool.pytest.ini_options]
+pythonpath = ["."]
+testpaths = ["tests"]
+# Só "test_*" é teste. Sem isso, o pytest acharia que testar_porta() e
+# testar_stream() (importadas nos testes) também são testes, pois começam com "test".
+python_functions = ["test_*"]
+# O ByteTrack do supervision avisa que sairá na 0.31 (fixamos supervision<0.31 no requirements).
+filterwarnings = ["ignore:.*ByteTrack.*deprecated.*:FutureWarning"]
+addopts = "-q"
